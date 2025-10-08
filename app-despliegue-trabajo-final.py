@@ -1,132 +1,257 @@
-# -*- coding: utf-8 -*-
-"""
-This is a Streamlit application.
-
-To run this application, save this code as a Python file (e.g., app.py)
-and execute it from a Colab Terminal using the command:
-
-streamlit run app.py
-
-Running this cell directly in the notebook will not launch the web application
-and will result in warnings and potentially a SystemExit as Streamlit
-detects it's not running in its intended environment.
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import sklearn
+import sys
+import os
 
-# Load the classical model pipeline
-# Make sure the path to your .joblib file is correct
-try:
-    classical_model = joblib.load('best_classical_model_pipeline.joblib')
-except FileNotFoundError:
-    st.error("Error: Classical model file not found. Please check the path.")
-    st.stop() # Stop the app if the file is not found
+# Configuración de la página
+st.set_page_config(
+    page_title="Predicción de Churn de Clientes",
+    page_icon="📊",
+    layout="wide"
+)
 
-# Load the ensemble model pipeline
-# Make sure the path to your .joblib file is correct
-try:
-    ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
-except FileNotFoundError:
-    st.error("Error: Ensemble model file not found. Please check the path.")
-    st.stop() # Stop the app if the file is not found
+# Título de la aplicación
+st.title("📊 Predicción de Churn de Clientes de Telecomunicaciones")
+st.markdown("Ingresa los datos del cliente para predecir la probabilidad de churn")
 
-
-st.title("Customer Churn Prediction")
-
-st.write("Enter the customer's details to predict churn.")
-
-# Create input fields for each feature
-# These should match the features your models were trained on
-gender = st.selectbox("Gender", ['Female', 'Male'])
-SeniorCitizen = st.selectbox("Senior Citizen", [0, 1])
-Partner = st.selectbox("Partner", ['Yes', 'No'])
-Dependents = st.selectbox("Dependents", ['Yes', 'No'])
-tenure = st.slider("Tenure (months)", 0, 72, 1)
-PhoneService = st.selectbox("Phone Service", ['Yes', 'No'])
-MultipleLines = st.selectbox("Multiple Lines", ['No phone service', 'No', 'Yes'])
-InternetService = st.selectbox("Internet Service", ['DSL', 'Fiber optic', 'No'])
-OnlineSecurity = st.selectbox("Online Security", ['No', 'Yes', 'No internet service'])
-OnlineBackup = st.selectbox("Online Backup", ['Yes', 'No', 'No internet service'])
-DeviceProtection = st.selectbox("Device Protection", ['No', 'Yes', 'No internet service'])
-TechSupport = st.selectbox("TechSupport", ['No', 'Yes', 'No internet service'])
-StreamingTV = st.selectbox("StreamingTV", ['No', 'Yes', 'No internet service'])
-StreamingMovies = st.selectbox("StreamingMovies", ['No', 'Yes', 'No internet service'])
-Contract = st.selectbox("Contract", ['Month-to-month', 'One year', 'Two year'])
-PaperlessBilling = st.selectbox("Paperless Billing", ['Yes', 'No'])
-PaymentMethod = st.selectbox("Payment Method", ['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'])
-MonthlyCharges = st.number_input("Monthly Charges", min_value=0.0, value=0.0)
-TotalCharges = st.number_input("Total Charges", min_value=0.0, value=0.0)
-
-# Create a button to trigger the prediction
-if st.button("Predict Churn"):
-    # Create a DataFrame from the input values
-    # Ensure column names and order match the training data
-    input_data = {
-        'gender': [gender],
-        'SeniorCitizen': [SeniorCitizen],
-        'Partner': [Partner],
-        'Dependents': [Dependents],
-        'tenure': [tenure],
-        'PhoneService': [PhoneService],
-        'MultipleLines': [MultipleLines],
-        'InternetService': [InternetService],
-        'OnlineSecurity': [OnlineSecurity],
-        'OnlineBackup': [OnlineBackup],
-        'DeviceProtection': [DeviceProtection],
-        'TechSupport': [TechSupport],
-        'StreamingTV': [StreamingTV],
-        'StreamingMovies': [StreamingMovies],
-        'Contract': [Contract],
-        'PaperlessBilling': [PaperlessBilling],
-        'PaymentMethod': [PaymentMethod],
-        'MonthlyCharges': [MonthlyCharges],
-        'TotalCharges': [TotalCharges]
-    }
-    input_df = pd.DataFrame(input_data)
-
-    # Add feature engineered columns if they were used in training and are not handled by the pipeline
-    # Uncomment and add these if your pipelines expect these features as separate columns
-    # input_df['Contract_encoded'] = input_df['Contract'].astype('category').cat.codes
-    # input_df['IsNewCustomer'] = (input_df['tenure'] == 1).astype(int)
-    # input_df['CustomerValue'] = input_df['MonthlyCharges'] * input_df['tenure']
-
-    # Apply the models to the input data
-    # Assuming the pipelines handle all necessary preprocessing and scaling
+# Función para cargar modelos con manejo de compatibilidad
+def load_model_with_fallback(model_path, fallback_path=None):
     try:
-        # Ensure 'TotalCharges' is numeric and handle missing values in the input data
-        input_df['TotalCharges'] = pd.to_numeric(input_df['TotalCharges'], errors='coerce')
-        input_df['TotalCharges'] = input_df['TotalCharges'].fillna(input_df['TotalCharges'].mean() if not input_df['TotalCharges'].isnull().all() else 0) # Handle case where all are NaN
-
-        # Impute missing values in other columns for the single input row if necessary
-        # For Streamlit inputs, basic types should prevent NaNs for categorical/binary.
-        # If NaNs are still possible, consider more robust handling based on training data imputation.
-        for col in ['Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'Contract', 'PaperlessBilling', 'PaymentMethod']:
-             if input_df[col].isnull().any():
-                 # Example: fill with a default or most frequent from training data
-                 pass # Assuming Streamlit inputs handle basic types and prevent NaNs for these.
-
-        if input_df['MonthlyCharges'].isnull().any():
-             # Similar to TotalCharges, handle potential NaNs in MonthlyCharges input.
-             input_df['MonthlyCharges'] = input_df['MonthlyCharges'].fillna(input_df['MonthlyCharges'].mean() if not input_df['MonthlyCharges'].isnull().all() else 0)
-
-        # If 'CustomerValue' is added manually and might have NaNs
-        if 'CustomerValue' in input_df.columns and input_df['CustomerValue'].isnull().any():
-             input_df['CustomerValue'] = input_df['CustomerValue'].fillna(input_df['CustomerValue'].mean() if not input_df['CustomerValue'].isnull().all() else 0)
-
-
-        prediction_classical = classical_model.predict(input_df)
-        prediction_ensemble = ensemble_model.predict(input_df)
-
-        st.subheader("Prediction Results:")
-        st.write(f"Classical Model Prediction: {'Churn' if prediction_classical[0] == 1 else 'No Churn'}")
-        st.write(f"Ensemble Model Prediction: {'Churn' if prediction_ensemble[0] == 1 else 'No Churn'}")
-
+        model = joblib.load(model_path)
+        st.sidebar.success(f"✅ Modelo cargado: {os.path.basename(model_path)}")
+        return model
     except Exception as e:
-        st.error(f"An error occurred during prediction: {e}")
-        st.write("Please check the input values and ensure the model files are correctly loaded.")
+        st.sidebar.warning(f"⚠️ Error con {model_path}: {str(e)}")
+        
+        # Intentar cargar versión compatible
+        if fallback_path and os.path.exists(fallback_path):
+            try:
+                model = joblib.load(fallback_path)
+                st.sidebar.success(f"✅ Modelo de respaldo cargado: {os.path.basename(fallback_path)}")
+                return model
+            except Exception as e2:
+                st.sidebar.error(f"❌ Error con modelo de respaldo: {str(e2)}")
+        
+        return None
+
+# Función alternativa para crear modelo simple si no se pueden cargar
+def create_simple_model():
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import StandardScaler, OneHotEncoder
+    from sklearn.compose import ColumnTransformer
+    from sklearn.pipeline import Pipeline
+    
+    # Crear un modelo simple
+    numeric_features = ['tenure', 'MonthlyCharges', 'TotalCharges']
+    categorical_features = ['gender', 'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService']
+    
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), numeric_features),
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+        ]
+    )
+    
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', RandomForestClassifier(n_estimators=50, random_state=42))
+    ])
+    
+    return model
+
+# Cargar o crear modelos
+classical_model = load_model_with_fallback(
+    'best_classical_model_pipeline.joblib',
+    'best_classical_model_pipeline_compatible.joblib'
+)
+
+ensemble_model = load_model_with_fallback(
+    'best_ensemble_model_pipeline.joblib', 
+    'best_ensemble_model_pipeline_compatible.joblib'
+)
+
+# Si no se pudieron cargar los modelos, mostrar opción para usar modelo simple
+if classical_model is None or ensemble_model is None:
+    st.error("⚠️ No se pudieron cargar los modelos entrenados.")
+    
+    st.info("""
+    **Solución:**
+    1. **Opción recomendada:** Reentrena los modelos con la misma versión de scikit-learn del entorno de producción
+    2. **Opción temporal:** Usa el modelo simple integrado (menor precisión)
+    """)
+    
+    use_simple_model = st.checkbox("Usar modelo simple integrado", value=False)
+    
+    if use_simple_model:
+        try:
+            with st.spinner("Creando modelo simple..."):
+                classical_model = create_simple_model()
+                ensemble_model = create_simple_model()
+                st.success("✅ Modelos simples creados exitosamente")
+        except Exception as e:
+            st.error(f"Error creando modelo simple: {e}")
+            st.stop()
+    else:
+        st.stop()
+
+# Crear formulario para entrada de datos
+with st.form("customer_data_form"):
+    st.header("📋 Información del Cliente")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        gender = st.selectbox("Género", ['Female', 'Male'])
+        SeniorCitizen = st.selectbox("Ciudadano Mayor", [0, 1])
+        Partner = st.selectbox("Pareja", ['Yes', 'No'])
+        Dependents = st.selectbox("Dependientes", ['Yes', 'No'])
+        tenure = st.slider("Meses de Antigüedad", 0, 72, 12)
+        PhoneService = st.selectbox("Servicio Telefónico", ['Yes', 'No'])
+    
+    with col2:
+        MultipleLines = st.selectbox("Líneas Múltiples", ['No phone service', 'No', 'Yes'])
+        InternetService = st.selectbox("Servicio de Internet", ['DSL', 'Fiber optic', 'No'])
+        Contract = st.selectbox("Tipo de Contrato", ['Month-to-month', 'One year', 'Two year'])
+        PaperlessBilling = st.selectbox("Facturación Sin Papel", ['Yes', 'No'])
+        MonthlyCharges = st.number_input("Cargos Mensuales ($)", min_value=0.0, max_value=200.0, value=50.0, step=1.0)
+        TotalCharges = st.number_input("Cargos Totales ($)", min_value=0.0, max_value=10000.0, value=1000.0, step=10.0)
+    
+    # Servicios adicionales
+    st.header("🛜 Servicios Adicionales")
+    
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        OnlineSecurity = st.selectbox("Seguridad en Línea", ['No', 'Yes', 'No internet service'])
+        OnlineBackup = st.selectbox("Copia de Seguridad en Línea", ['Yes', 'No', 'No internet service'])
+        DeviceProtection = st.selectbox("Protección de Dispositivo", ['No', 'Yes', 'No internet service'])
+    
+    with col4:
+        TechSupport = st.selectbox("Soporte Técnico", ['No', 'Yes', 'No internet service'])
+        StreamingTV = st.selectbox("TV en Streaming", ['No', 'Yes', 'No internet service'])
+        StreamingMovies = st.selectbox("Películas en Streaming", ['No', 'Yes', 'No internet service'])
+    
+    PaymentMethod = st.selectbox("Método de Pago", [
+        'Electronic check', 
+        'Mailed check', 
+        'Bank transfer (automatic)', 
+        'Credit card (automatic)'
+    ])
+    
+    # Botón de predicción
+    submitted = st.form_submit_button("🔮 Predecir Churn", type="primary")
+
+# Procesar cuando se envía el formulario
+if submitted:
+    try:
+        # Crear DataFrame con los datos de entrada
+        input_data = {
+            'gender': [gender],
+            'SeniorCitizen': [SeniorCitizen],
+            'Partner': [Partner],
+            'Dependents': [Dependents],
+            'tenure': [tenure],
+            'PhoneService': [PhoneService],
+            'MultipleLines': [MultipleLines],
+            'InternetService': [InternetService],
+            'OnlineSecurity': [OnlineSecurity],
+            'OnlineBackup': [OnlineBackup],
+            'DeviceProtection': [DeviceProtection],
+            'TechSupport': [TechSupport],
+            'StreamingTV': [StreamingTV],
+            'StreamingMovies': [StreamingMovies],
+            'Contract': [Contract],
+            'PaperlessBilling': [PaperlessBilling],
+            'PaymentMethod': [PaymentMethod],
+            'MonthlyCharges': [MonthlyCharges],
+            'TotalCharges': [TotalCharges]
+        }
+        
+        input_df = pd.DataFrame(input_data)
+        
+        # Asegurar que las columnas numéricas sean correctas
+        input_df['SeniorCitizen'] = input_df['SeniorCitizen'].astype(int)
+        input_df['tenure'] = input_df['tenure'].astype(int)
+        input_df['MonthlyCharges'] = input_df['MonthlyCharges'].astype(float)
+        input_df['TotalCharges'] = pd.to_numeric(input_df['TotalCharges'], errors='coerce')
+        
+        # Realizar predicciones
+        prediction_classical = classical_model.predict(input_df)[0]
+        prediction_ensemble = ensemble_model.predict(input_df)[0]
+        
+        # Mostrar resultados
+        st.header("📊 Resultados de la Predicción")
+        
+        col5, col6 = st.columns(2)
+        
+        with col5:
+            st.subheader("Modelo Clásico")
+            if prediction_classical == 1:
+                st.error("🔴 **CHURN** - El cliente probablemente cancelará el servicio")
+            else:
+                st.success("🟢 **NO CHURN** - El cliente probablemente se mantendrá")
+        
+        with col6:
+            st.subheader("Modelo Ensemble")
+            if prediction_ensemble == 1:
+                st.error("🔴 **CHURN** - El cliente probablemente cancelará el servicio")
+            else:
+                st.success("🟢 **NO CHURN** - El cliente probablemente se mantendrá")
+        
+        # Mostrar resumen
+        st.header("📈 Resumen")
+        if prediction_classical == prediction_ensemble:
+            if prediction_classical == 1:
+                st.error("""
+                ⚠️ **ALERTA DE CHURN** 
+                
+                Ambos modelos predicen que este cliente tiene alta probabilidad de cancelar el servicio.
+                Se recomienda:
+                - Contactar al cliente
+                - Ofrecer incentivos de retención
+                - Analizar causas de insatisfacción
+                """)
+            else:
+                st.success("""
+                ✅ **CLIENTE ESTABLE** 
+                
+                Ambos modelos predicen que el cliente se mantendrá.
+                Se recomienda:
+                - Continuar con el servicio actual
+                - Monitorear cambios en el comportamiento
+                """)
+        else:
+            st.warning("""
+            🟡 **PREDICCIÓN INCIERTA** 
+            
+            Los modelos tienen predicciones diferentes. 
+            Se recomienda análisis adicional y seguimiento cercano.
+            """)
+        
+        # Mostrar datos ingresados
+        with st.expander("📋 Ver datos ingresados"):
+            st.dataframe(input_df.T.rename(columns={0: 'Valor'}))
+            
+    except Exception as e:
+        st.error(f"❌ Error durante la predicción: {str(e)}")
+        st.info("💡 Verifica que todos los campos estén completos y sean válidos.")
+
+# Información adicional en el sidebar
+st.sidebar.header("ℹ️ Información")
+st.sidebar.info("""
+**Instrucciones:**
+1. Completa todos los campos del formulario
+2. Haz clic en 'Predecir Churn'
+3. Revisa los resultados de ambos modelos
+
+**Notas:**
+- Churn = El cliente cancelará el servicio
+- No Churn = El cliente se mantendrá
+""")
+
+# Footer
 st.markdown("---")
 st.markdown("*Sistema de predicción de churn - Análisis Predictivo*")
-
