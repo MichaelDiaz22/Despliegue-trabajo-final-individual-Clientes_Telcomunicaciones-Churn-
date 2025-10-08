@@ -1,48 +1,17 @@
-# To run this Streamlit application, save this code as a Python file (e.g., app.py)
-# and execute it from a Colab Terminal using the command: streamlit run app.py
-import streamlit as st
+from ipywidgets import interact, FloatSlider, IntSlider, Dropdown, Text
+from IPython.display import display
 import pandas as pd
-import numpy as np
 import joblib
 
-# Load the classical model pipeline
+# Load the classical model pipeline (assuming it's already loaded in the kernel)
 classical_model = joblib.load('best_classical_model_pipeline.joblib')
 
-# Load the ensemble model pipeline
+# Load the ensemble model pipeline (assuming it's already loaded in the kernel)
 ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
 
-# Load the preprocessor (if needed for individual input processing)
-# preprocessor = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/preprocessor.joblib')
+# Assuming the models are already loaded in the kernel from cell -FMlqSTRL9f3
 
-
-st.title("Customer Churn Prediction")
-
-st.write("Enter the customer's details to predict churn.")
-
-# Create input fields for each feature
-# Refer to your dataset columns for the exact feature names and types
-gender = st.selectbox("Gender", ['Female', 'Male'])
-SeniorCitizen = st.selectbox("Senior Citizen", [0, 1])
-Partner = st.selectbox("Partner", ['Yes', 'No'])
-Dependents = st.selectbox("Dependents", ['Yes', 'No'])
-tenure = st.slider("Tenure (months)", 0, 72, 1)
-PhoneService = st.selectbox("Phone Service", ['Yes', 'No'])
-MultipleLines = st.selectbox("Multiple Lines", ['No phone service', 'No', 'Yes'])
-InternetService = st.selectbox("Internet Service", ['DSL', 'Fiber optic', 'No'])
-OnlineSecurity = st.selectbox("Online Security", ['No', 'Yes', 'No internet service'])
-OnlineBackup = st.selectbox("Online Backup", ['Yes', 'No', 'No internet service'])
-DeviceProtection = st.selectbox("Device Protection", ['No', 'Yes', 'No internet service'])
-TechSupport = st.selectbox("TechSupport", ['No', 'Yes', 'No internet service'])
-StreamingTV = st.selectbox("StreamingTV", ['No', 'Yes', 'No internet service'])
-StreamingMovies = st.selectbox("StreamingMovies", ['No', 'Yes', 'No internet service'])
-Contract = st.selectbox("Contract", ['Month-to-month', 'One year', 'Two year'])
-PaperlessBilling = st.selectbox("Paperless Billing", ['Yes', 'No'])
-PaymentMethod = st.selectbox("Payment Method", ['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'])
-MonthlyCharges = st.number_input("Monthly Charges", min_value=0.0, value=0.0)
-TotalCharges = st.number_input("Total Charges", min_value=0.0, value=0.0)
-
-# Create a button to trigger the prediction
-if st.button("Predict Churn"):
+def predict_churn(gender, SeniorCitizen, Partner, Dependents, tenure, PhoneService, MultipleLines, InternetService, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies, Contract, PaperlessBilling, PaymentMethod, MonthlyCharges, TotalCharges):
     # Create a DataFrame from the input values
     input_data = {
         'gender': [gender],
@@ -74,39 +43,57 @@ if st.button("Predict Churn"):
     # input_df['IsNewCustomer'] = (input_df['tenure'] == 1).astype(int)
     # input_df['CustomerValue'] = input_df['MonthlyCharges'] * input_df['tenure']
 
+    # Ensure 'TotalCharges' is numeric and handle potential missing values (though ipywidgets should prevent this)
+    input_df['TotalCharges'] = pd.to_numeric(input_df['TotalCharges'], errors='coerce')
+    input_df['TotalCharges'] = input_df['TotalCharges'].fillna(input_df['TotalCharges'].mean() if not input_df['TotalCharges'].isnull().all() else 0) # Handle case where all are NaN
 
-    # Apply the models to the input data
-    # Assuming the pipelines handle preprocessing and scaling
+    # Impute missing values in other columns for the single input row if necessary
+    # For ipywidgets, this might not be strictly needed as inputs are controlled, but included for robustness
+    for col in ['Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'Contract', 'PaperlessBilling', 'PaymentMethod']:
+         if input_df[col].isnull().any():
+             # A better approach might be to use a default value or the mode from the *training* data.
+             pass
+
+    if input_df['MonthlyCharges'].isnull().any():
+         input_df['MonthlyCharges'] = input_df['MonthlyCharges'].fillna(input_df['MonthlyCharges'].mean() if not input_df['MonthlyCharges'].isnull().all() else 0)
+
+    if 'CustomerValue' in input_df.columns and input_df['CustomerValue'].isnull().any():
+         input_df['CustomerValue'] = input_df['CustomerValue'].fillna(input_df['CustomerValue'].mean() if not input_df['CustomerValue'].isnull().all() else 0)
+
+
+    # Make predictions using the loaded models
     try:
-        # Ensure 'TotalCharges' is numeric and handle missing values in the input data
-        input_df['TotalCharges'] = pd.to_numeric(input_df['TotalCharges'], errors='coerce')
-        input_df['TotalCharges'] = input_df['TotalCharges'].fillna(input_df['TotalCharges'].mean() if not input_df['TotalCharges'].isnull().all() else 0) # Handle case where all are NaN
-
-        # Impute missing values in other columns for the single input row
-        for col in ['Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'Contract', 'PaperlessBilling', 'PaymentMethod']:
-             if input_df[col].isnull().any():
-                 # For a single row, mode imputation might not be meaningful if the value is missing.
-                 # A better approach might be to use a default value or the mode from the *training* data.
-                 # For simplicity here, we'll just note this.
-                 pass # Assuming Streamlit inputs handle basic types and prevent NaNs for these.
-
-        if input_df['MonthlyCharges'].isnull().any():
-             # Similar to TotalCharges, handle potential NaNs in MonthlyCharges input.
-             input_df['MonthlyCharges'] = input_df['MonthlyCharges'].fillna(input_df['MonthlyCharges'].mean() if not input_df['MonthlyCharges'].isnull().all() else 0)
-
-
-        # If 'CustomerValue' is added manually and might have NaNs
-        if 'CustomerValue' in input_df.columns and input_df['CustomerValue'].isnull().any():
-             input_df['CustomerValue'] = input_df['CustomerValue'].fillna(input_df['CustomerValue'].mean() if not input_df['CustomerValue'].isnull().all() else 0)
-
-
         prediction_classical = classical_model.predict(input_df)
         prediction_ensemble = ensemble_model.predict(input_df)
 
-        st.subheader("Prediction Results:")
-        st.write(f"Classical Model Prediction: {'Churn' if prediction_classical[0] == 1 else 'No Churn'}")
-        st.write(f"Ensemble Model Prediction: {'Churn' if prediction_ensemble[0] == 1 else 'No Churn'}")
+        print("--- Prediction Results ---")
+        print(f"Classical Model Prediction: {'Churn' if prediction_classical[0] == 1 else 'No Churn'}")
+        print(f"Ensemble Model Prediction: {'Churn' if prediction_ensemble[0] == 1 else 'No Churn'}")
+        print("--------------------------")
 
     except Exception as e:
-        st.error(f"An error occurred during prediction: {e}")
+        print(f"An error occurred during prediction: {e}")
 
+
+# Create interactive widgets for each feature
+interact(predict_churn,
+         gender=Dropdown(options=['Female', 'Male'], description='Gender:'),
+         SeniorCitizen=Dropdown(options=[0, 1], description='Senior Citizen:'),
+         Partner=Dropdown(options=['Yes', 'No'], description='Partner:'),
+         Dependents=Dropdown(options=['Yes', 'No'], description='Dependents:'),
+         tenure=IntSlider(min=0, max=72, step=1, value=1, description='Tenure (months):'),
+         PhoneService=Dropdown(options=['Yes', 'No'], description='Phone Service:'),
+         MultipleLines=Dropdown(options=['No phone service', 'No', 'Yes'], description='Multiple Lines:'),
+         InternetService=Dropdown(options=['DSL', 'Fiber optic', 'No'], description='Internet Service:'),
+         OnlineSecurity=Dropdown(options=['No', 'Yes', 'No internet service'], description='Online Security:'),
+         OnlineBackup=Dropdown(options=['Yes', 'No', 'No internet service'], description='Online Backup:'),
+         DeviceProtection=Dropdown(options=['No', 'Yes', 'No internet service'], description='Device Protection:'),
+         TechSupport=Dropdown(options=['No', 'Yes', 'No internet service'], description='Tech Support:'),
+         StreamingTV=Dropdown(options=['No', 'Yes', 'No internet service'], description='Streaming TV:'),
+         StreamingMovies=Dropdown(options=['No', 'Yes', 'No internet service'], description='Streaming Movies:'),
+         Contract=Dropdown(options=['Month-to-month', 'One year', 'Two year'], description='Contract:'),
+         PaperlessBilling=Dropdown(options=['Yes', 'No'], description='Paperless Billing:'),
+         PaymentMethod=Dropdown(options=['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'], description='Payment Method:'),
+         MonthlyCharges=FloatSlider(min=0.0, max=200.0, step=0.05, value=0.0, description='Monthly Charges:'), # Adjusted max value for better range
+         TotalCharges=FloatSlider(min=0.0, max=10000.0, step=0.05, value=0.0, description='Total Charges:') # Adjusted max value for better range
+        );
