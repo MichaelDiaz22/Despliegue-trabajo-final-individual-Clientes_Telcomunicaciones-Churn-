@@ -1,13 +1,15 @@
+# To run this Streamlit application, save this code as a Python file (e.g., app.py)
+# and execute it from a Colab Terminal using the command: streamlit run app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 
 # Load the classical model pipeline
-classical_model = joblib.load('best_classical_model_pipeline.joblib')
+classical_model = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/best_classical_model_pipeline.joblib')
 
 # Load the ensemble model pipeline
-ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
+ensemble_model = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/best_ensemble_model_pipeline.joblib')
 
 # Load the preprocessor (if needed for individual input processing)
 # preprocessor = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/preprocessor.joblib')
@@ -30,9 +32,9 @@ InternetService = st.selectbox("Internet Service", ['DSL', 'Fiber optic', 'No'])
 OnlineSecurity = st.selectbox("Online Security", ['No', 'Yes', 'No internet service'])
 OnlineBackup = st.selectbox("Online Backup", ['Yes', 'No', 'No internet service'])
 DeviceProtection = st.selectbox("Device Protection", ['No', 'Yes', 'No internet service'])
-TechSupport = st.selectbox("Tech Support", ['No', 'Yes', 'No internet service'])
-StreamingTV = st.selectbox("Streaming TV", ['No', 'Yes', 'No internet service'])
-StreamingMovies = st.selectbox("Streaming Movies", ['No', 'Yes', 'No internet service'])
+TechSupport = st.selectbox("TechSupport", ['No', 'Yes', 'No internet service'])
+StreamingTV = st.selectbox("StreamingTV", ['No', 'Yes', 'No internet service'])
+StreamingMovies = st.selectbox("StreamingMovies", ['No', 'Yes', 'No internet service'])
 Contract = st.selectbox("Contract", ['Month-to-month', 'One year', 'Two year'])
 PaperlessBilling = st.selectbox("Paperless Billing", ['Yes', 'No'])
 PaymentMethod = st.selectbox("Payment Method", ['Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'])
@@ -107,5 +109,3 @@ if st.button("Predict Churn"):
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
-
-
