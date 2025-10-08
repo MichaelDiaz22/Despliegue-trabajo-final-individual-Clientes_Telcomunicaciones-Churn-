@@ -3,3 +3,4 @@ joblib
 scikit-learn
 openpyxl
 ipywidgets
+IPython.display
