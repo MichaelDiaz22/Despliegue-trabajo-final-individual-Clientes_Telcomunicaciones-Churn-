@@ -64,13 +64,13 @@ def create_simple_model():
 
 # Cargar o crear modelos
 classical_model = load_model_with_fallback(
-    'best_classical_model_pipeline.joblib',
-    'best_classical_model_pipeline_compatible.joblib'
+    'best_classical_model_pipeline_compatible.joblib',
+    'best_classical_model_pipeline_compatible_compatible.joblib'
 )
 
 ensemble_model = load_model_with_fallback(
-    'best_ensemble_model_pipeline.joblib', 
-    'best_ensemble_model_pipeline_compatible.joblib'
+    'best_ensemble_model_pipeline_compatible.joblib', 
+    'best_ensemble_model_pipeline_compatible_compatible.joblib'
 )
 
 # Si no se pudieron cargar los modelos, mostrar opción para usar modelo simple
