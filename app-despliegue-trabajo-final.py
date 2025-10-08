@@ -10,7 +10,7 @@ import joblib
 # Load the classical model pipeline
 # Make sure the path to your .joblib file is correct
 try:
-    classical_model = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/best_classical_model_pipeline.joblib')
+    classical_model = joblib.load('best_classical_model_pipeline.joblib')
 except FileNotFoundError:
     st.error("Error: Classical model file not found. Please check the path.")
     st.stop() # Stop the app if the file is not found
@@ -18,7 +18,7 @@ except FileNotFoundError:
 # Load the ensemble model pipeline
 # Make sure the path to your .joblib file is correct
 try:
-    ensemble_model = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/best_ensemble_model_pipeline.joblib')
+    ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
 except FileNotFoundError:
     st.error("Error: Ensemble model file not found. Please check the path.")
     st.stop() # Stop the app if the file is not found
@@ -117,3 +117,4 @@ if st.button("Predict Churn"):
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
         st.write("Please check the input values and ensure the model files are correctly loaded.")
+
