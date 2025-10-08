@@ -72,9 +72,32 @@ if st.button("Predict Churn"):
     # input_df['IsNewCustomer'] = (input_df['tenure'] == 1).astype(int)
     # input_df['CustomerValue'] = input_df['MonthlyCharges'] * input_df['tenure']
 
+
     # Apply the models to the input data
     # Assuming the pipelines handle preprocessing and scaling
     try:
+        # Ensure 'TotalCharges' is numeric and handle missing values in the input data
+        input_df['TotalCharges'] = pd.to_numeric(input_df['TotalCharges'], errors='coerce')
+        input_df['TotalCharges'] = input_df['TotalCharges'].fillna(input_df['TotalCharges'].mean() if not input_df['TotalCharges'].isnull().all() else 0) # Handle case where all are NaN
+
+        # Impute missing values in other columns for the single input row
+        for col in ['Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'Contract', 'PaperlessBilling', 'PaymentMethod']:
+             if input_df[col].isnull().any():
+                 # For a single row, mode imputation might not be meaningful if the value is missing.
+                 # A better approach might be to use a default value or the mode from the *training* data.
+                 # For simplicity here, we'll just note this.
+                 pass # Assuming Streamlit inputs handle basic types and prevent NaNs for these.
+
+        if input_df['MonthlyCharges'].isnull().any():
+             # Similar to TotalCharges, handle potential NaNs in MonthlyCharges input.
+             input_df['MonthlyCharges'] = input_df['MonthlyCharges'].fillna(input_df['MonthlyCharges'].mean() if not input_df['MonthlyCharges'].isnull().all() else 0)
+
+
+        # If 'CustomerValue' is added manually and might have NaNs
+        if 'CustomerValue' in input_df.columns and input_df['CustomerValue'].isnull().any():
+             input_df['CustomerValue'] = input_df['CustomerValue'].fillna(input_df['CustomerValue'].mean() if not input_df['CustomerValue'].isnull().all() else 0)
+
+
         prediction_classical = classical_model.predict(input_df)
         prediction_ensemble = ensemble_model.predict(input_df)
 
