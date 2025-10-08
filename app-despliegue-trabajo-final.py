@@ -64,14 +64,10 @@ def create_simple_model():
 
 # Cargar o crear modelos
 classical_model = load_model_with_fallback(
-    'best_classical_model_pipeline_compatible.joblib',
-    'best_classical_model_pipeline_compatible_compatible.joblib'
-)
+    'best_classical_model_pipeline_compatible.joblib')
 
 ensemble_model = load_model_with_fallback(
-    'best_ensemble_model_pipeline_compatible.joblib', 
-    'best_ensemble_model_pipeline_compatible_compatible.joblib'
-)
+    'best_ensemble_model_pipeline_compatible.joblib')
 
 # Si no se pudieron cargar los modelos, mostrar opción para usar modelo simple
 if classical_model is None or ensemble_model is None:
@@ -255,3 +251,4 @@ st.sidebar.info("""
 # Footer
 st.markdown("---")
 st.markdown("*Sistema de predicción de churn - Análisis Predictivo*")
+
