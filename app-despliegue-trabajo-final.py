@@ -4,10 +4,10 @@ import numpy as np
 import joblib
 
 # Load the classical model pipeline
-classical_model = joblib.load('/best_classical_model_pipeline.joblib')
+classical_model = joblib.load('best_classical_model_pipeline.joblib')
 
 # Load the ensemble model pipeline
-ensemble_model = joblib.load('/best_ensemble_model_pipeline.joblib')
+ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
 
 # Load the preprocessor (if needed for individual input processing)
 # preprocessor = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/preprocessor.joblib')
@@ -107,4 +107,5 @@ if st.button("Predict Churn"):
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
+
 
