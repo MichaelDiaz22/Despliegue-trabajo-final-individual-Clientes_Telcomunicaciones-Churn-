@@ -10,7 +10,7 @@ classical_model = joblib.load('best_classical_model_pipeline.joblib')
 ensemble_model = joblib.load('best_ensemble_model_pipeline.joblib')
 
 # Load the preprocessor (if needed for individual input processing)
-# preprocessor = joblib.load('/content/drive/MyDrive/ANALITICA PREDICTIVA/Trabajo final individual/preprocessor.joblib')
+preprocessor = joblib.load('preprocessor.joblib')
 
 
 st.title("Customer Churn Prediction")
@@ -107,3 +107,4 @@ if st.button("Predict Churn"):
 
     except Exception as e:
         st.error(f"An error occurred during prediction: {e}")
+
